@@ -1,9 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { access, link, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { autostartPlan, windowsSid } from "./autostart.js";
 
@@ -43,6 +43,21 @@ export function agyHookCommand(node: string, bootstrap: string, event: typeof ev
   }
   const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
   return `${quote(node)} ${quote(bootstrap)} hook ${event}`;
+}
+
+function settingsArgs(launcher: string) {
+  const script = fileURLToPath(new URL("../integrations/windows-settings/settings.ps1", import.meta.url));
+  return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-STA", "-File", script,
+    "-Node", process.execPath, "-Launcher", launcher];
+}
+
+export async function openSettings(dir: string, cli: string): Promise<void> {
+  if (process.platform !== "win32") throw new Error("The Agent Link settings window currently supports Windows only");
+  const child = spawn("powershell.exe", settingsArgs(cli), {
+    env: { ...process.env, AGENT_LINK_HOME: dir }, detached: true, stdio: "ignore", windowsHide: true,
+  });
+  await new Promise<void>((resolve, reject) => { child.once("spawn", resolve); child.once("error", reject); });
+  child.unref();
 }
 
 export async function install(dir: string, cli: string, enableAutostart: boolean) {
@@ -96,6 +111,14 @@ export async function install(dir: string, cli: string, enableAutostart: boolean
     const [command, ...args] = autostart.command;
     if (command) execFileSync(command, args, { stdio: "pipe", timeout: 10_000, windowsHide: true });
   }
-  return { data_dir: dir, pi_extension: pi, antigravity_hooks: hooks,
+  let settingsShortcut: string | undefined;
+  if (process.platform === "win32") {
+    settingsShortcut = join(process.env.APPDATA || join(home, "AppData", "Roaming"),
+      "Microsoft", "Windows", "Start Menu", "Programs", "Agent Link.lnk");
+    execFileSync("powershell.exe", [...settingsArgs(boot), "-Shortcut", settingsShortcut], {
+      windowsHide: true, stdio: "pipe", timeout: 10_000,
+    });
+  }
+  return { data_dir: dir, pi_extension: pi, antigravity_hooks: hooks, settings_shortcut: settingsShortcut,
     autostart: autostart ? { id: autostart.id, path: autostart.path } : null };
 }

@@ -18,7 +18,8 @@ function sandbox(t) {
   const dir = join(home, "Agent Link Data");
   const piHome = join(home, "Pi custom home");
   const config = join(home, ".gemini", "config", "hooks.json");
-  const env = { ...process.env, HOME: home, USERPROFILE: home, AGENT_LINK_HOME: dir, PI_CODING_AGENT_DIR: piHome };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: join(home, "AppData", "Roaming"),
+    AGENT_LINK_HOME: dir, PI_CODING_AGENT_DIR: piHome };
   return { home, dir, config, pi: join(piHome, "extensions", "agent-link.ts"), env,
     install: () => spawnSync(process.execPath, [cli, "install"], { env, encoding: "utf8" }) };
 }
@@ -41,6 +42,10 @@ test("install merges named hooks, preserves existing state and runs the installe
   const output = JSON.parse(installed.stdout);
   assert.equal(output.pi_extension, box.pi);
   assert.equal(output.autostart, null);
+  if (process.platform === "win32") {
+    assert.equal(output.settings_shortcut, join(box.env.APPDATA, "Microsoft", "Windows", "Start Menu", "Programs", "Agent Link.lnk"));
+    assert.ok(existsSync(output.settings_shortcut));
+  }
   assert.equal(read(join(box.dir, "hooks.before-agent-link.json")), previous);
   assert.equal(read(join(box.dir, "config.json")), '{"workspaces":[]}\n');
   const hooks = json(box.config);

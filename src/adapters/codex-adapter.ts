@@ -230,7 +230,7 @@ export function registerCodexSession(home: string, session: CodexSession, title:
         values.push(Object.hasOwn(explicit, name) ? explicit[name] : same?.[name] ?? fallback?.[name] ?? zero);
       }
       db.open();
-      db.exec("PRAGMA busy_timeout = 5000");
+      db.exec("PRAGMA busy_timeout = 250");
       db.prepare(`INSERT INTO threads (${names.join(",")}) VALUES (${names.map(() => "?").join(",")})
         ON CONFLICT(id) DO NOTHING`).run(...values);
       if (db.prepare("SELECT rollout_path FROM threads WHERE id = ?").get(session.id)?.rollout_path !== session.path) {

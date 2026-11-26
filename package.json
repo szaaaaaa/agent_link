@@ -9,7 +9,7 @@
   "bin": {
     "agent-link": "./dist/cli.js"
   },
-  "files": ["dist", "integrations/pi-extension", "integrations/agy-hooks", "integrations/codex-hooks", "scripts/probe-agy.mjs"],
+  "files": ["dist", "integrations/pi-extension", "integrations/agy-hooks", "integrations/codex-hooks", "integrations/windows-settings", "scripts/probe-agy.mjs"],
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node --test"

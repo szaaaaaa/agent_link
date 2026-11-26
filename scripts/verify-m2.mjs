@@ -19,7 +19,7 @@ const root = await mkdtemp(join(tmpdir(), "al-m2-"));
 const [workspace, seed, piDir, codexDir, agentDir] = ["work", "seed", "pi", "codex", "agent"].map((dir) => join(root, dir));
 const cli = fileURLToPath(new URL("../dist/cli.js", import.meta.url));
 const projector = join(root, "projector.cjs");
-const environment = { ...process.env, HOME: root, USERPROFILE: root, PI_CODING_AGENT_DIR: piDir,
+const environment = { ...process.env, HOME: root, USERPROFILE: root, APPDATA: join(root, "appdata"), PI_CODING_AGENT_DIR: piDir,
   PI_CODING_AGENT_SESSION_DIR: join(piDir, "sessions"), CODEX_HOME: codexDir, AGENT_LINK_HOME: agentDir,
   AGENT_LINK_CODEX_CLI: projector, AGENT_LINK_CODEX_AUTO_SYNC: "0", AGENT_LINK_AGY_FIRST_INVOCATION: "0" };
 const agyEnvironment = { ...environment, APPDATA: join(root, "appdata"), LOCALAPPDATA: join(root, "local"),

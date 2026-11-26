@@ -8,14 +8,17 @@ import { readJsonlLines } from "../core/jsonl.js";
 
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT";
 
-export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: string) {
+export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: string, piUsesSharedDir: boolean) {
   const context = db.prepare(`SELECT t.title, t.head_turn_id, w.raw_path FROM threads t
     JOIN workspaces w ON w.workspace_key = t.workspace_key AND w.enabled = 1 WHERE t.thread_id = ?`);
   const bindings = db.prepare("SELECT * FROM bindings WHERE thread_id = ? AND agent IN ('pi', 'codex')");
   const add = db.prepare(`INSERT INTO bindings (thread_id, agent, native_session_id, native_path, native_file_key,
     last_byte_offset, last_written_turn_id, updated_at, last_git_head, last_git_fp, mirror_pending) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`);
-  const finish = db.prepare(`UPDATE bindings SET mirror_pending = 0, native_notice = ?,
+  const finish = db.prepare(`UPDATE bindings SET mirror_pending = 0, native_notice = ?, registration_pending = ?,
     last_timeline_turn_id = last_written_turn_id, last_seen_turn_id = last_written_turn_id WHERE thread_id = ? AND agent = ?`);
+  const registered = db.prepare(`UPDATE bindings SET native_notice = NULL, registration_pending = 0
+    WHERE thread_id = ? AND agent = 'codex'`);
+  const retryAfter = new Map<string, number>();
 
   async function publish(path: string, key: string, size: number) {
     const stage = path + ".agent-link-pending";
@@ -53,11 +56,24 @@ export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: str
     const { raw_path: cwd, title, head_turn_id: head } = ctx;
     const existing = bindings.all(threadId);
     for (const binding of existing) {
-      if (binding.mirror_pending !== 1) continue;
       const path = String(binding.native_path);
-      await publish(path, String(binding.native_file_key), Number(binding.last_byte_offset));
-      const notice = binding.agent === "codex" ? await register(path, cwd, title, String(binding.native_session_id)) : null;
-      finish.run(notice, threadId, binding.agent);
+      if (binding.mirror_pending === 1) {
+        await publish(path, String(binding.native_file_key), Number(binding.last_byte_offset));
+        const notice = binding.agent === "codex" ? await register(path, cwd, title, String(binding.native_session_id)) : null;
+        finish.run(notice, Number(notice !== null), threadId, binding.agent);
+      } else if (binding.registration_pending === 1 && Date.now() >= (retryAfter.get(threadId) ?? 0)) {
+        const indexed = await lstat(join(codexHome, "state_5.sqlite")).catch((error) => {
+          if (!missing(error)) throw error;
+        });
+        if (!indexed?.isFile()) continue;
+        retryAfter.set(threadId, Date.now() + 5000);
+        const info = await lstat(path).catch((error) => { if (!missing(error)) throw error; });
+        if (info?.isFile() && `${info.dev}:${info.ino}` === binding.native_file_key && await realpath(path) === path &&
+            await register(path, cwd, title, String(binding.native_session_id)) === null) {
+          registered.run(threadId);
+          retryAfter.delete(threadId);
+        }
+      }
     }
     const agent = !existing.some((b) => b.agent === "pi") ? "pi"
       : !existing.some((b) => b.agent === "codex") ? "codex" : null;
@@ -68,10 +84,10 @@ export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: str
     const root = await realpath(configuredRoot);
     const defaults = agent === "codex" ? codexDefaults(root, cwd) : null;
     const codex = defaults && describeCodexSession(root, cwd, defaults.modelProvider, defaults.model, defaults.version);
-    const draft = codex || describePiSession(piSessionDir(root, cwd), cwd);
+    const draft = codex || describePiSession(piUsesSharedDir ? root : piSessionDir(root, cwd), cwd);
     const parent = dirname(draft.path);
     let dir = root;
-    for (const part of relative(root, parent).split(sep)) {
+    for (const part of relative(root, parent).split(sep).filter(Boolean)) {
       dir = join(dir, part);
       await mkdir(dir, { mode: 0o700 }).catch((error) => {
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
@@ -86,6 +102,11 @@ export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: str
     try {
       await file.writeFile(draft.header);
       let previous: string | null = null;
+      if (agent === "pi") {
+        previous = "al_shared";
+        await file.writeFile(JSON.stringify({ type: "session_info", id: previous, parentId: null,
+          timestamp: new Date().toISOString(), name: "[Sync] " + title }) + "\n");
+      }
       let ordinal = 0;
       for (const id of engine.unread(threadId, null) ?? []) {
         const turn = await engine.readTurn(threadId, id);
@@ -103,7 +124,7 @@ export function mirrorPublisher(db: DatabaseSync, piRoot: string, codexHome: str
       await file.close();
       await publish(draft.path, key, stat.size);
       const notice = codex ? registerCodexSession(root, codex, title) : null;
-      finish.run(notice, threadId, agent);
+      finish.run(notice, Number(notice !== null), threadId, agent);
     } finally {
       await file.close();
       if (!kept) await unlink(stage);

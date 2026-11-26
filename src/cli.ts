@@ -15,6 +15,7 @@ if (major < 22 || (major === 22 && minor < 13)) {
   } else if (!command || command === "--help") {
     console.log(`Usage: agent-link [--help | --version]
   install [--autostart]
+  settings  (Windows graphical sharing settings)
   watch <workspace> | unwatch <workspace>
   status [workspace] | resume <thread_id>
   select <thread_id> <pi|codex|antigravity>
@@ -51,6 +52,9 @@ if (major < 22 || (major === 22 && minor < 13)) {
       } else if (command === "install" && (arg === undefined || arg === "--autostart")) {
         const { install } = await import("./install.js");
         output = await install(dir, fileURLToPath(import.meta.url), arg === "--autostart");
+      } else if (command === "settings" && arg === undefined) {
+        const { openSettings } = await import("./install.js");
+        await openSettings(dir, fileURLToPath(import.meta.url));
       } else if (command === "hook" && arg === "CodexPrompt") {
         const { runCodexPromptHook } = await import("./codex-hook.js");
         output = await runCodexPromptHook(dir, fileURLToPath(import.meta.url));

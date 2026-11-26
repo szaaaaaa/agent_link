@@ -46,7 +46,8 @@ async function header<T>(path: string, info: Stats, parse: (line: string) => T |
 
 export function watchNativeSessions(db: DatabaseSync, warn: (message: string) => void) {
   const piHome = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
-  const piRoot = resolve(process.env.PI_CODING_AGENT_SESSION_DIR || join(piHome, "sessions"));
+  const piSessionOverride = process.env.PI_CODING_AGENT_SESSION_DIR;
+  const piRoot = resolve(piSessionOverride || join(piHome, "sessions"));
   const codexHome = resolve(process.env.CODEX_HOME || join(homedir(), ".codex"));
   const sources = [
     { agent: "pi", root: piRoot, prefix: "", header: piHeader },
@@ -397,5 +398,5 @@ export function watchNativeSessions(db: DatabaseSync, warn: (message: string) =>
       break;
     }
   }
-  return { adapters, scan, piHistory, piSync, codexHistory, syncOffline, syncCodexBacklog, project: mirrorPublisher(db, piRoot, codexHome) };
+  return { adapters, scan, piHistory, piSync, codexHistory, syncOffline, syncCodexBacklog, project: mirrorPublisher(db, piRoot, codexHome, !!piSessionOverride) };
 }

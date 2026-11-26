@@ -112,7 +112,8 @@ export function openStateDb(dataDir = join(homedir(), ".agent-link")): DatabaseS
     if (!writeColumns.includes("resume_turn_id")) db.exec("ALTER TABLE native_writes ADD COLUMN resume_turn_id TEXT");
     const bindingColumns = db.prepare("PRAGMA table_info(bindings)").all().map((column) => column.name);
     for (const [name, definition] of [["native_file_key", "TEXT"], ["mirror_pending", "INTEGER NOT NULL DEFAULT 0"],
-      ["native_notice", "TEXT"], ["last_timeline_turn_id", "TEXT"], ["projection_pending", "INTEGER NOT NULL DEFAULT 0"]]) {
+      ["native_notice", "TEXT"], ["last_timeline_turn_id", "TEXT"], ["projection_pending", "INTEGER NOT NULL DEFAULT 0"],
+      ["registration_pending", "INTEGER NOT NULL DEFAULT 0"]]) {
       if (!bindingColumns.includes(name)) db.exec(`ALTER TABLE bindings ADD COLUMN ${name} ${definition}`);
     }
     if (!bindingColumns.includes("last_timeline_turn_id")) {

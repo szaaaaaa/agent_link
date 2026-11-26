@@ -162,8 +162,8 @@ function writeRows(path, rows) {
   writeFileSync(path, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
 }
 
-function state(dir, query) {
-  const db = new DatabaseSync(join(dir, "state.sqlite"), { readOnly: true });
+function state(dir, query, file = "state.sqlite") {
+  const db = new DatabaseSync(join(dir, file), { readOnly: true });
   try { return db.prepare(query).all(); }
   finally { db.close(); }
 }
@@ -265,6 +265,24 @@ test("Pi preserves its parent chain across restart and respects unwatch and file
   assert.equal((await second.done).code, 0);
 });
 
+test("publishes a named Pi mirror directly in the configured Pi Desktop session directory", async (t) => {
+  const box = sandbox(t);
+  const workspace = join(box.dir, "project");
+  const day = join(box.codexHome, "sessions", "2026", "11", "24");
+  mkdirSync(workspace);
+  mkdirSync(day, { recursive: true });
+  const codex = nativeRows("codex");
+  codex[0].payload.cwd = workspace;
+  writeRows(join(day, "rollout-source.jsonl"), codex);
+  await box.cli("watch", workspace);
+  const pi = await until(() => state(box.dir, "SELECT * FROM bindings WHERE agent = 'pi' AND mirror_pending = 0")[0], "Pi mirror");
+  assert.equal(dirname(pi.native_path), box.piRoot);
+  const rows = readFileSync(pi.native_path, "utf8").trim().split("\n").map(JSON.parse);
+  assert.equal(rows[1].name, "[Sync] Sample question.");
+  assert.equal(rows[2].parentId, rows[1].id);
+  assert.equal(rows[3].parentId, rows[2].id);
+});
+
 test("publishes the first mirror once; Pi injection is acknowledged only after Pi persists it", async (t) => {
   const box = sandbox(t);
   const workspace = join(box.dir, "project");
@@ -294,6 +312,15 @@ test("publishes the first mirror once; Pi injection is acknowledged only after P
   await running(box.dir);
   assert.equal((await until(mirror, "recovered mirror")).native_session_id, codex.native_session_id);
   assert.equal(readFileSync(codex.native_path, "utf8"), file);
+  const indexPath = join(box.codexHome, "state_5.sqlite");
+  const index = new DatabaseSync(indexPath);
+  try {
+    index.exec(`CREATE TABLE threads (id TEXT PRIMARY KEY, rollout_path TEXT, created_at INTEGER,
+      updated_at INTEGER, cwd TEXT, title TEXT)`);
+  } finally { index.close(); }
+  await until(() => mirror()?.native_notice === null, "late Codex index registration");
+  assert.deepEqual({ ...state(box.codexHome, "SELECT id, title, rollout_path FROM threads", "state_5.sqlite")[0] },
+    { id: codex.native_session_id, title: "[Sync] Sample question.", rollout_path: codex.native_path });
 
   const fixture = nativeRows("codex").slice(1);
   for (const row of fixture) {
