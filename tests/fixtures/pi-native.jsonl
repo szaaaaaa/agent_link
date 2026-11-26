@@ -1,0 +1,6 @@
+{"type":"session","version":3,"id":"01a21066-2df8-76cd-856c-90ab5c60bb98","timestamp":"2026-11-25T01:51:01.625Z","cwd":"C:\\fixture\\work"}
+{"type":"model_change","id":"91b2b83b","parentId":null,"timestamp":"2026-11-25T01:51:01.701Z","provider":"fixture","modelId":"fixture"}
+{"type":"thinking_level_change","id":"8e6fc725","parentId":"91b2b83b","timestamp":"2026-11-25T01:51:01.701Z","thinkingLevel":"off"}
+{"type":"message","id":"e22387da","parentId":"8e6fc725","timestamp":"2026-11-25T01:51:01.711Z","message":{"role":"system","content":"","sections":{"preamble":"Excluded from sync."},"timestamp":1795571461710}}
+{"type":"message","id":"56a20fdf","parentId":"e22387da","timestamp":"2026-11-25T01:51:01.711Z","message":{"role":"user","content":[{"type":"text","text":"Sample question."}],"timestamp":1795571461708}}
+{"type":"message","id":"72cd58c3","parentId":"56a20fdf","timestamp":"2026-11-25T01:51:01.791Z","message":{"role":"assistant","content":[{"type":"text","text":"Sample reply."}],"api":"openai-completions","provider":"fixture","model":"fixture","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":1795571461757,"responseId":"mock","rawStopReason":"stop","durationMs":34,"thinkingLevel":"off"}}

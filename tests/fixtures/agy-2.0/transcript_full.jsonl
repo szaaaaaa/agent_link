@@ -1,0 +1,9 @@
+{"step_index":0,"type":"USER_INPUT","source":"USER_EXPLICIT","status":"DONE","content":"<USER_REQUEST>\nSample question.\n</USER_REQUEST>\n<ADDITIONAL_METADATA>Excluded metadata.</ADDITIONAL_METADATA>\n<USER_SETTINGS_CHANGE>Excluded settings.</USER_SETTINGS_CHANGE>"}
+{"step_index":1,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","thinking":"Excluded thinking.","tool_calls":[{"name":"run_command","args":{"CommandLine":"npm test","WaitMsBeforeAsync":500,"toolSummary":"Example command"}}]}
+{"step_index":4,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","tool_calls":[{"name":"read_file","args":{"Path":"fixture.txt","StartLine":1,"EndLine":20}}]}
+{"step_index":6,"type":"GENERIC","source":"MODEL","status":"DONE","content":"Excluded full tool body."}
+{"step_index":29,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","thinking":"Excluded thinking."}
+{"step_index":32,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","content":"First reply restored from full transcript.","thinking":"Excluded thinking."}
+{"step_index":33,"type":"USER_INPUT","source":"USER_EXPLICIT","status":"DONE","content":"<USER_REQUEST>\n#link latest Expanded user question 雪.\n</USER_REQUEST>\n<ADDITIONAL_METADATA>Excluded metadata.</ADDITIONAL_METADATA>"}
+{"step_index":34,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","tool_calls":[{"name":"search_web","args":{"query":"Excluded query."}}]}
+{"step_index":38,"type":"PLANNER_RESPONSE","source":"MODEL","status":"DONE","content":"Second reply restored from full transcript.","thinking":"Excluded thinking."}
